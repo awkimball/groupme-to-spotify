@@ -174,8 +174,7 @@ class GroupmeSpotifyPlaylistUpdate:
 
         # If a last checked message was identified
         if last_checked_message:
-            messages = list(groupchat.messages.list_after(
-                    last_checked_message).autopage())
+            messages = list(groupchat.messages.list_all_after(message_id=last_checked_message))
             with alive_bar(
                     len(messages), title='Scanning messages...\n'
                     ) as bar:
@@ -191,13 +190,12 @@ class GroupmeSpotifyPlaylistUpdate:
 
         # If no last checked message was identified
         else:
-            messages = list(groupchat.messages.list_all().autopage())
+            messages = list(groupchat.messages.list_all())
+            last_message_id = messages[0].id
             with alive_bar(
                     len(messages), title='Scanning messages...\n'
                     ) as bar:
-                for message in messages:
-                    # Store the ID of the most recently checked message
-                    last_message_id = message.id
+                for message in reversed(messages):
                     if message.text:
                         if 'https://open.spotify.com/track/' in message.text:
                             # Isolate the Spotify link
@@ -211,7 +209,8 @@ class GroupmeSpotifyPlaylistUpdate:
 
         # Update the log file with the ID of the most recent message in the
         # group that has been checked
-        self.update_log(last_message_id)
+        if 'last_message_id' in locals():
+            self.update_log(last_message_id)
 
         return song_urls
 
@@ -229,12 +228,8 @@ class GroupmeSpotifyPlaylistUpdate:
             while song_urls:
                 temp = song_urls[0:100]
                 song_urls = song_urls[100:]
-                self.sp.user_playlist_add_tracks(
-                    self.sp_user_id,
-                    self.sp_playlist_id,
-                    temp
-                    )
-                bar(incr=len(temp))
+                self.sp.playlist_add_items(self.sp_playlist_id, temp)
+                bar(len(temp))
 
         print("Done\n")
 
