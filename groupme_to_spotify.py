@@ -8,6 +8,7 @@ from groupy.client import Client
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import json
+import time
 from alive_progress import alive_bar
 
 
@@ -191,11 +192,12 @@ class GroupmeSpotifyPlaylistUpdate:
         # If no last checked message was identified
         else:
             messages = list(groupchat.messages.list_all())
-            last_message_id = messages[0].id
             with alive_bar(
                     len(messages), title='Scanning messages...\n'
                     ) as bar:
                 for message in reversed(messages):
+                    # Store the ID of the most recently checked message
+                    last_message_id = message.id
                     if message.text:
                         if 'https://open.spotify.com/track/' in message.text:
                             # Isolate the Spotify link
@@ -226,9 +228,10 @@ class GroupmeSpotifyPlaylistUpdate:
                 ) as bar:
             # Spotify API only accepts 100 songs at a time
             while song_urls:
-                temp = song_urls[0:100]
-                song_urls = song_urls[100:]
-                self.sp.playlist_add_items(self.sp_playlist_id, temp)
+                temp = song_urls[0:1]
+                song_urls = song_urls[1:]
+                self.sp.playlist_add_items(self.sp_playlist_id, temp, position=0)
+                time.sleep(0.2)
                 bar(len(temp))
 
         print("Done\n")
